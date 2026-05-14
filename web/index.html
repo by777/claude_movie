@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>影视资源库</title>
+<style>
+  :root {
+    --bg: #0f0f14;
+    --card-bg: #1a1a24;
+    --border: #2a2a3a;
+    --text: #e0e0e0;
+    --text-muted: #8888a0;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --tag-baidu: #3b82f6;
+    --tag-ali: #f59e0b;
+    --tag-quark: #06b6d4;
+    --tag-115: #ef4444;
+    --tag-magnet: #10b981;
+    --star: #f59e0b;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    position: sticky; top:0; z-index:100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap;
+  }
+  .logo { font-size: 22px; font-weight: 700; white-space: nowrap; }
+  .logo span { color: var(--accent); }
+  .search-wrap { flex:1; min-width: 240px; position: relative; }
+  .search-input {
+    width:100%; padding: 10px 16px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--card-bg); color: var(--text);
+    font-size: 15px; outline: none; transition: border-color .2s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-muted); }
+  .result-count { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex; gap: 12px; padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; align-items: center;
+  }
+  .filter-label { font-size: 13px; color: var(--text-muted); margin-right: 4px; }
+  .filter-chip {
+    padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border);
+    font-size: 13px; cursor: pointer; transition: all .2s;
+    background: transparent; color: var(--text-muted);
+    user-select: none;
+  }
+  .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .filter-chip:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+
+  /* Main grid */
+  .main { padding: 20px 24px; }
+  .movie-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  /* Card */
+  .movie-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+  }
+  .movie-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .movie-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .card-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .card-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; display: flex; gap: 12px; align-items: center; }
+  .card-rating { color: var(--star); font-weight: 600; }
+  .card-categories { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cat-tag {
+    padding: 2px 8px; border-radius: 4px; font-size: 11px;
+    background: rgba(99,102,241,.15); color: var(--accent);
+  }
+  .card-links { display: flex; gap: 6px; flex-wrap: wrap; }
+  .link-badge {
+    padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;
+  }
+  .link-badge.baidu { background: rgba(59,130,246,.2); color: var(--tag-baidu); }
+  .link-badge.ali { background: rgba(245,158,11,.2); color: var(--tag-ali); }
+  .link-badge.quark { background: rgba(6,182,212,.2); color: var(--tag-quark); }
+  .link-badge.x115 { background: rgba(239,68,68,.2); color: var(--tag-115); }
+  .link-badge.magnet { background: rgba(16,185,129,.2); color: var(--tag-magnet); }
+
+  /* Detail panel */
+  .overlay {
+    position: fixed; inset:0; background: rgba(0,0,0,.6); z-index:200;
+    display: none; align-items: center; justify-content: center;
+  }
+  .overlay.show { display: flex; }
+  .detail-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 90vw; max-width: 700px; max-height: 85vh;
+    overflow-y: auto; padding: 28px;
+    position: relative;
+  }
+  .detail-close {
+    position: absolute; top: 16px; right: 20px;
+    background: none; border: none; color: var(--text-muted);
+    font-size: 24px; cursor: pointer; line-height: 1;
+  }
+  .detail-close:hover { color: var(--text); }
+  .detail-title { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+  .detail-meta { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .detail-cats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+
+  .link-group { margin-bottom: 20px; }
+  .link-group-title {
+    font-size: 14px; font-weight: 600; margin-bottom: 10px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .link-group-count { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+  .link-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 8px;
+    background: var(--bg); margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .link-quality {
+    padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+    background: rgba(99,102,241,.2); color: var(--accent); white-space: nowrap;
+  }
+  .link-info { font-size: 13px; color: var(--text-muted); flex:1; min-width: 100px; }
+  .link-btn {
+    padding: 6px 14px; border-radius: 6px; border: none;
+    font-size: 13px; cursor: pointer; transition: all .2s;
+    white-space: nowrap;
+  }
+  .link-btn.copy { background: var(--border); color: var(--text); }
+  .link-btn.copy:hover { background: #3a3a4a; }
+  .link-btn.copy.copied { background: #10b981; color: #fff; }
+  .link-btn.open { background: var(--accent); color: #fff; }
+  .link-btn.open:hover { background: var(--accent-hover); }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+  @media (max-width: 640px) {
+    .header { padding: 12px 16px; }
+    .filter-bar { padding: 10px 16px; }
+    .main { padding: 12px 16px; }
+    .movie-grid { grid-template-columns: 1fr; }
+    .detail-panel { width: 96vw; padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">🎬 影视<span>资源库</span></div>
+  <div class="search-wrap">
+    <input class="search-input" id="search" placeholder="搜索影片名、别名或拼音…" autofocus>
+  </div>
+  <div class="result-count" id="resultCount"></div>
+</div>
+
+<div class="filter-bar" id="filterBar">
+  <span class="filter-label">类型：</span>
+  <span class="filter-chip active" data-type="all">全部</span>
+  <span class="filter-chip" data-type="百度网盘">百度网盘</span>
+  <span class="filter-chip" data-type="阿里云盘">阿里云盘</span>
+  <span class="filter-chip" data-type="夸克网盘">夸克网盘</span>
+  <span class="filter-chip" data-type="115网盘">115网盘</span>
+  <span class="filter-chip" data-type="磁力链接">磁力链接</span>
+</div>
+
+<div class="main">
+  <div class="movie-grid" id="movieGrid"></div>
+  <div class="empty-state" id="emptyState" style="display:none">
+    <div class="icon">📭</div>
+    <div>没有找到匹配的影片</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="detail-panel" id="detailPanel"></div>
+</div>
+
+<script>
+// --- Data loading ---
+let movies = [];
+let selectedType = 'all';
+
+async function loadData() {
+  // Try relative path first (works when serving with a local HTTP server)
+  const paths = ['../data/movies.json', 'data/movies.json'];
+  for (const p of paths) {
+    try {
+      const r = await fetch(p);
+      if (r.ok) {
+        movies = await r.json();
+        render();
+        return;
+      }
+    } catch (_) {}
+  }
+  // If all fetches fail, show a helpful message
+  document.getElementById('movieGrid').innerHTML = `
+    <div class="empty-state">
+      <div class="icon">📂</div>
+      <div>无法加载数据文件。请使用本地服务器打开：</div>
+      <div style="margin-top:12px;font-family:monospace;background:var(--bg);padding:8px 16px;border-radius:6px;display:inline-block;">
+        cd claude_movie && python -m http.server 8080
+      </div>
+      <div style="margin-top:8px;color:var(--text-muted);">然后访问 http://localhost:8080/web/</div>
+    </div>
+  `;
+}
+loadData();
+
+// --- Pinyin initials map (common characters in movie titles) ---
+const pinyinMap = {
+  '盗': 'd', '梦': 'm', '空': 'k', '间': 'j', '星': 'x', '际': 'j', '穿': 'c', '越': 'y',
+  '肖': 'x', '申': 's', '克': 'k', '的': 'd', '救': 'j', '赎': 's', '流': 'l', '浪': 'l',
+  '地': 'd', '球': 'q', '封': 'f', '神': 's', '第': 'd', '一': 'y', '部': 'b', '奥': 'a',
+  '本': 'b', '海': 'h', '默': 'm', '千': 'q', '与': 'y', '寻': 'x', '教': 'j', '父': 'f',
+  '蝙': 'b', '蝠': 'f', '侠': 'x', '黑': 'h', '暗': 'a', '骑': 'q', '士': 's', '楚': 'c',
+  '门': 'm', '世': 's', '界': 'j', '沙': 's', '丘': 'q', '哪': 'n', '吒': 'z', '魔': 'm',
+  '童': 't', '降': 'j', '黑': 'h', '客': 'k', '帝': 'd', '国': 'g', '寄': 'j', '生': 's',
+  '虫': 'c', '功': 'g', '夫': 'f',
+};
+
+function toPinyinInitials(s) {
+  let result = '';
+  for (const ch of s) {
+    result += pinyinMap[ch] || '';
+  }
+  return result;
+}
+
+// --- Search & filter ---
+function getFilteredMovies() {
+  const query = document.getElementById('search').value.trim().toLowerCase();
+  let filtered = movies;
+
+  // Type filter
+  if (selectedType !== 'all') {
+    filtered = filtered.filter(m => m.links.some(l => l.type === selectedType));
+  }
+
+  // Search
+  if (query) {
+    filtered = filtered.filter(m => {
+      if (m.title.toLowerCase().includes(query)) return true;
+      if (m.aliases && m.aliases.some(a => a.toLowerCase().includes(query))) return true;
+      // Pinyin initials match
+      const initials = toPinyinInitials(m.title);
+      if (initials && initials.includes(query)) return true;
+      // Pinyin full (check if query is like pinyin without spaces)
+      return false;
+    });
+  }
+
+  // Sort by rating desc
+  filtered.sort((a, b) => (b.douban_rating || 0) - (a.douban_rating || 0));
+
+  return filtered;
+}
+
+// --- Render ---
+function render() {
+  const filtered = getFilteredMovies();
+  const grid = document.getElementById('movieGrid');
+  const empty = document.getElementById('emptyState');
+  const count = document.getElementById('resultCount');
+
+  count.textContent = `共 ${filtered.length} 部`;
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    grid.innerHTML = filtered.map(m => {
+      const linkTypes = [...new Set(m.links.map(l => l.type))];
+      return `
+        <div class="movie-card" data-id="${m.id}" onclick="showDetail('${m.id}')">
+          <div class="card-title">${esc(m.title)}</div>
+          <div class="card-meta">
+            <span>${m.year}</span>
+            <span class="card-rating">★ ${m.douban_rating}</span>
+          </div>
+          <div class="card-categories">
+            ${(m.category || []).slice(0, 3).map(c => `<span class="cat-tag">${esc(c)}</span>`).join('')}
+          </div>
+          <div class="card-links">
+            ${linkTypes.map(t => `<span class="link-badge ${typeClass(t)}">${esc(t)}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function esc(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function typeClass(type) {
+  if (type.includes('百度')) return 'baidu';
+  if (type.includes('阿里')) return 'ali';
+  if (type.includes('夸克')) return 'quark';
+  if (type.includes('115')) return 'x115';
+  if (type.includes('磁力')) return 'magnet';
+  return '';
+}
+
+// --- Detail panel ---
+function showDetail(id) {
+  const m = movies.find(m => m.id === id);
+  if (!m) return;
+
+  const groups = {};
+  for (const l of m.links) {
+    if (!groups[l.type]) groups[l.type] = [];
+    groups[l.type].push(l);
+  }
+
+  const typeOrder = ['百度网盘', '阿里云盘', '夸克网盘', '115网盘', '磁力链接'];
+  let linkIndex = 0;
+  m._detailLinks = [];
+
+  const panel = document.getElementById('detailPanel');
+  panel.innerHTML = `
+    <button class="detail-close" onclick="closeDetail()">✕</button>
+    <div class="detail-title">${esc(m.title)}</div>
+    <div class="detail-meta">
+      <span>${m.year}</span>
+      <span class="card-rating">★ ${m.douban_rating}</span>
+      ${m.aliases && m.aliases.length ? `<span>AKA: ${esc(m.aliases.join(', '))}</span>` : ''}
+    </div>
+    <div class="detail-cats">
+      ${(m.category || []).map(c => `<span class="cat-tag">${esc(c)}</span>`).join('')}
+    </div>
+    ${typeOrder.filter(t => groups[t]).map(type => `
+      <div class="link-group">
+        <div class="link-group-title">
+          <span class="link-badge ${typeClass(type)}" style="font-size:12px">${esc(type)}</span>
+          <span class="link-group-count">${groups[type].length} 个资源</span>
+        </div>
+        ${groups[type].map(l => {
+          const idx = linkIndex++;
+          m._detailLinks.push(l);
+          return `
+          <div class="link-row">
+            <span class="link-quality">${esc(l.quality)}</span>
+            <span class="link-info">${esc(l.size)} · ${esc(l.format)}</span>
+            <button class="link-btn copy" data-link-idx="${idx}" data-action="copy">复制链接</button>
+            <button class="link-btn open" data-link-idx="${idx}" data-action="open">打开</button>
+          </div>
+        `;}).join('')}
+      </div>
+    `).join('')}
+  `;
+
+  // Delegate click events for link buttons
+  panel.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const idx = parseInt(btn.dataset.linkIdx);
+      const link = m._detailLinks[idx];
+      if (btn.dataset.action === 'copy') {
+        navigator.clipboard.writeText(link.url).then(() => {
+          btn.textContent = '已复制 ✓';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = '复制链接'; btn.classList.remove('copied'); }, 1500);
+        });
+      } else {
+        window.open(link.url, '_blank');
+      }
+    });
+  });
+
+  document.getElementById('overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  // Highlight selected card
+  document.querySelectorAll('.movie-card').forEach(c => c.classList.remove('selected'));
+  const card = document.querySelector(`.movie-card[data-id="${id}"]`);
+  if (card) card.classList.add('selected');
+}
+
+function closeDetail() {
+  document.getElementById('overlay').classList.remove('show');
+  document.body.style.overflow = '';
+  document.querySelectorAll('.movie-card').forEach(c => c.classList.remove('selected'));
+}
+
+// --- Events ---
+document.getElementById('search').addEventListener('input', () => {
+  render();
+});
+
+document.getElementById('overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeDetail();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeDetail();
+});
+
+document.querySelectorAll('#filterBar .filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#filterBar .filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    selectedType = chip.dataset.type;
+    render();
+  });
+});
+</script>
+</body>
+</html>
