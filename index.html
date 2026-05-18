@@ -207,7 +207,7 @@ let selectedType = 'all';
 
 async function loadData() {
   // Try relative path first (works when serving with a local HTTP server)
-  const paths = ['../data/movies.json', 'data/movies.json'];
+  const paths = ['data/movies.json', 'data/movies.json'];
   for (const p of paths) {
     try {
       const r = await fetch(p);
